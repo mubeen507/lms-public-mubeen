@@ -1,0 +1,40 @@
+pipeline {
+    agent{
+       label 'eks'
+
+     }
+
+    environment {
+
+    DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+     registry = "yellaiahdocker/backend-k8s"
+        registryCredential = 'dockerhub'
+        dockerImage = ''
+    }
+
+    stages {
+
+        stage('Building the docker image') {
+            steps {
+                sh 'cd webapp && docker build -t yellaiahdocker/frontend-working .'
+            }
+        }
+        stage('Logging into dockerhub account') {
+            steps {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            }
+        }
+        stage('pushing the docker image into dockerhub') {
+            steps {
+                  sh 'docker push yellaiahdocker/frontend-working'
+            }
+        }
+        stage('Remove old docker images') {
+             steps {
+                 sh 'docker rmi -f yellaiahdocker/frontend-working'
+
+            }
+        }
+         
+    }
+}

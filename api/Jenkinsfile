@@ -1,0 +1,50 @@
+pipeline {
+    agent{
+       label 'eks'
+
+     }
+
+    environment {
+
+    DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+     registry = "yellaiahdocker/backend-k8s"
+        registryCredential = 'dockerhub'
+        dockerImage = ''
+    }
+
+    stages {
+
+        stage('Building the docker image') {
+            steps {
+                sh 'cd api && docker build -t yellaiahdocker/backend-k8s .'
+            }
+        }
+        stage('Logging into dockerhub account') {
+            steps {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            }
+        }
+        stage('pushing the docker image into dockerhub') {
+            steps {
+                  sh 'docker push yellaiahdocker/backend-k8s'
+            }
+        }
+        stage('Remove old docker images') {
+             steps {
+                 sh 'docker rmi -f yellaiahdocker/backend-k8s'
+
+            }
+        }
+         stage('Running on kubernetes') {
+            steps {
+                echo 'Deploying....'
+                sh "cd api && kubectl apply -f database-persistent-volume.yaml"
+                sh "cd api && kubectl create -f postgres-deployment.yaml"
+                 sh "cd api && kubectl create -f postgres-cluster-ip-service.yaml"
+                sh "cd api && kubectl create -f api-deployment.yaml"
+                sh "cd api && kubectl create -f api-load-balancer-service.yaml"
+                sh "kubectl rollout restart deployment api-deployment"
+            }
+        }
+    }
+}
